@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -22,8 +22,18 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Gemini API Key is required. Please set it in Settings.' });
       }
 
-      const selectedModel = model || 'gemini-1.5-flash';
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${key}`;
+      // 순차 적용 우선순위 모델 리스트 (3.7 Flash -> 3.6 Flash -> 3.5 Flash ...)
+      const GEMINI_MODELS_CASCADE = [
+        model || 'gemini-3.7-flash',
+        'gemini-3.7-flash',
+        'gemini-3.6-flash',
+        'gemini-3.5-flash',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
+      ];
+      // Deduplicate preserving order
+      const modelQueue = Array.from(new Set(GEMINI_MODELS_CASCADE));
 
       // Convert messages to Gemini format
       const contents = [];
@@ -45,27 +55,39 @@ export default async function handler(req, res) {
         });
       }
 
-      const geminiRes = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048
-          }
-        })
-      });
+      let lastError = null;
 
-      if (!geminiRes.ok) {
-        const errData = await geminiRes.json();
-        throw new Error(errData.error?.message || `Gemini API Error: ${geminiRes.statusText}`);
+      for (const modelName of modelQueue) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
+          const geminiRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents,
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048
+              }
+            })
+          });
+
+          if (geminiRes.ok) {
+            const data = await geminiRes.json();
+            const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (reply) {
+              return res.status(200).json({ success: true, reply, modelUsed: modelName });
+            }
+          } else {
+            const errData = await geminiRes.json().catch(() => ({}));
+            lastError = new Error(errData.error?.message || `Gemini API Error (${modelName}): ${geminiRes.statusText}`);
+          }
+        } catch (err) {
+          lastError = err;
+        }
       }
 
-      const data = await geminiRes.json();
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '답변을 생성하지 못했습니다.';
-
-      return res.status(200).json({ success: true, reply });
+      throw lastError || new Error('모든 Gemini 모델(3.7 Flash, 3.6 Flash, 3.5 Flash) 요청에 실패했습니다.');
 
     } else if (provider === 'openai') {
       const key = apiKey || process.env.OPENAI_API_KEY;
@@ -103,7 +125,7 @@ export default async function handler(req, res) {
       const data = await openAiRes.json();
       const reply = data.choices?.[0]?.message?.content || '답변을 생성하지 못했습니다.';
 
-      return res.status(200).json({ success: true, reply });
+      return res.status(200).json({ success: true, reply, modelUsed: selectedModel });
     }
 
     return res.status(400).json({ error: 'Invalid provider' });

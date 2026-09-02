@@ -54,6 +54,7 @@ export class SettingsModal {
       const updated = {
         appTheme: selectedTheme,
         aiProvider: document.getElementById('settingAiProvider').value,
+        geminiModel: document.getElementById('settingGeminiModel')?.value || 'gemini-3.7-flash',
         geminiApiKey: document.getElementById('settingGeminiKey').value.trim(),
         openAiApiKey: document.getElementById('settingOpenAiKey').value.trim(),
         gdriveClientId: document.getElementById('settingGDriveClientId').value.trim(),
@@ -91,6 +92,8 @@ export class SettingsModal {
     if (themeRadio) themeRadio.checked = true;
 
     document.getElementById('settingAiProvider').value = settings.aiProvider || 'gemini';
+    const modelSelect = document.getElementById('settingGeminiModel');
+    if (modelSelect) modelSelect.value = settings.geminiModel || 'gemini-3.7-flash';
     document.getElementById('settingGeminiKey').value = settings.geminiApiKey || '';
     document.getElementById('settingOpenAiKey').value = settings.openAiApiKey || '';
     document.getElementById('settingGDriveClientId').value = settings.gdriveClientId || '';

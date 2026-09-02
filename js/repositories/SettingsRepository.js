@@ -6,8 +6,10 @@
 export const DEFAULT_SETTINGS = {
   appTheme: 'oak',
   aiProvider: 'gemini',
+  geminiModel: 'gemini-3.7-flash',
   geminiApiKey: '',
   openAiApiKey: '',
+  openAiModel: 'gpt-4o-mini',
   gdriveClientId: '',
   yearlyGoal: 30
 };

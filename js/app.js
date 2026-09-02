@@ -57,11 +57,11 @@ class App {
    * Factory method for creating active AI Provider (OCP & Strategy)
    */
   configureAIProvider() {
-    const { aiProvider, geminiApiKey, openAiApiKey } = this.settings;
+    const { aiProvider, geminiApiKey, geminiModel, openAiApiKey, openAiModel } = this.settings;
     if (aiProvider === 'gemini' && geminiApiKey) {
-      this.aiService.setProvider(new GeminiProvider(geminiApiKey));
+      this.aiService.setProvider(new GeminiProvider(geminiApiKey, geminiModel || 'gemini-3.7-flash'));
     } else if (aiProvider === 'openai' && openAiApiKey) {
-      this.aiService.setProvider(new OpenAIProvider(openAiApiKey));
+      this.aiService.setProvider(new OpenAIProvider(openAiApiKey, openAiModel || 'gpt-4o-mini'));
     } else {
       this.aiService.setProvider(new DemoMockProvider());
     }
