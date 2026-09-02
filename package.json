@@ -1,0 +1,27 @@
+{
+  "name": "my-literary-haven",
+  "version": "1.0.0",
+  "private": true,
+  "description": "나만의 지적 개인 서재 & 독서기록 및 AI 저술 연구실 (YES24, LaTeX, AI 심층토론, Google Drive 백업)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vite": "^5.4.2"
+  },
+  "keywords": [
+    "personal-library",
+    "reading-tracker",
+    "yes24",
+    "latex",
+    "gemini-ai",
+    "google-drive-backup",
+    "vercel"
+  ],
+  "author": "My Literary Haven",
+  "license": "MIT"
+}
