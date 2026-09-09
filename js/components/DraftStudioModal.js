@@ -120,13 +120,13 @@ export class DraftStudioModal {
     this.loadDraft();
     this.renderVault();
     this.updatePreview();
-    this.modalEl.classList.add('active');
+    this.modalEl.classList.remove('hidden');
     if (window.lucide) window.lucide.createIcons();
   }
 
   close() {
     if (!this.modalEl) return;
-    this.modalEl.classList.remove('active');
+    this.modalEl.classList.add('hidden');
   }
 
   loadDraft() {

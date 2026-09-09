@@ -39,6 +39,7 @@
   --shadow-sm: 0 2px 6px rgba(45, 38, 30, 0.06);
   --shadow-md: 0 6px 18px rgba(45, 38, 30, 0.09);
   --shadow-lg: 0 14px 34px rgba(45, 38, 30, 0.14);
+  --shadow-xl: 0 24px 50px -12px rgba(0, 0, 0, 0.35);
   --shadow-3d-book: 5px 8px 18px rgba(0, 0, 0, 0.25), -1px 0 2px rgba(255, 255, 255, 0.2) inset;
 
   --radius-sm: 6px;
@@ -116,6 +117,8 @@ body[data-theme="paper"] {
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.12);
   --shadow-3d-book: 4px 6px 16px rgba(0, 0, 0, 0.16);
+}
+
 /* Theme: Dark Scholar (Deep Obsidian & Antique Amber Gold) */
 body[data-theme="scholar"] {
   --bg-app: #0c0a09;
@@ -320,6 +323,13 @@ html, body {
 
 .btn:active {
   transform: translateY(1px);
+}
+
+.btn svg,
+.btn .lucide {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .btn-primary {
