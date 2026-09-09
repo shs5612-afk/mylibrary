@@ -24,6 +24,7 @@ import { StatsModal } from './components/StatsModal.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { QuoteCardModal } from './components/QuoteCardModal.js';
 import { GDriveBackupModal } from './components/GDriveBackupModal.js';
+import { DraftStudioModal } from './components/DraftStudioModal.js';
 
 class App {
   constructor() {
@@ -150,6 +151,11 @@ class App {
         this.showToast('서재 데이터가 성공적으로 복원되었습니다.', 'success');
       }
     });
+
+    // F. Split-Screen Draft Studio Modal (DIP)
+    this.draftStudioModal = new DraftStudioModal({
+      bookRepo: this.bookRepo
+    });
   }
 
   initViews() {
@@ -178,7 +184,18 @@ class App {
         this.updateTabCounts();
         this.showToast('도서가 서재에서 삭제되었습니다.', 'info');
       },
-      onOpenQuoteCard: (data) => this.quoteCardModal.open(data)
+      onOpenQuoteCard: (data) => this.quoteCardModal.open(data),
+      onSaveToWritingDrafts: (draftItem) => {
+        try {
+          const currentDraft = localStorage.getItem('library_draft_studio_chapter');
+          let draftData = currentDraft ? JSON.parse(currentDraft) : { title: '제1장. 새로운 이론의 정립', content: '' };
+          draftData.content += `\n\n### [AI 토론 통찰] ${draftItem.title}\n${draftItem.content}\n`;
+          localStorage.setItem('library_draft_studio_chapter', JSON.stringify(draftData));
+          this.showToast('집필 스튜디오 원고에 통찰이 추가되었습니다!', 'success');
+        } catch (e) {
+          console.error(e);
+        }
+      }
     });
   }
 
@@ -188,6 +205,12 @@ class App {
     });
 
     document.getElementById('btnOpenAddBook').addEventListener('click', () => this.bookSearchModal.open());
+    
+    const btnDraftStudio = document.getElementById('btnOpenDraftStudio');
+    if (btnDraftStudio) {
+      btnDraftStudio.addEventListener('click', () => this.draftStudioModal.open());
+    }
+
     document.getElementById('btnOpenStats').addEventListener('click', () => this.statsModal.open());
     document.getElementById('btnOpenGDrive').addEventListener('click', () => this.gdriveModal.open());
     document.getElementById('btnOpenSettings').addEventListener('click', () => this.settingsModal.open());

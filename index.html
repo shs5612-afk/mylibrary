@@ -68,6 +68,11 @@
             <span>도서 등록 (YES24)</span>
           </button>
 
+          <button id="btnOpenDraftStudio" class="btn btn-secondary" title="서재 지식 기반 원고 집필 스튜디오 (LaTeX & Markdown)">
+            <i data-lucide="pen-tool"></i>
+            <span class="desktop-only">집필 스튜디오</span>
+          </button>
+
           <button id="btnOpenStats" class="btn btn-secondary" title="독서 통계 및 인사이트">
             <i data-lucide="bar-chart-2"></i>
             <span class="desktop-only">독서 통계</span>
@@ -415,6 +420,13 @@
                     <span class="theme-name">📜 미니멀 페이퍼 (Linen Paper)</span>
                   </div>
                 </label>
+                <label class="theme-card-option">
+                  <input type="radio" name="appTheme" value="scholar" />
+                  <div class="theme-preview scholar-preview">
+                    <span class="theme-color-chip scholar" style="background:#f59e0b; border:1px solid #78350f;"></span>
+                    <span class="theme-name">🕯️ 다크 스칼라 (Dark Scholar & Antique Amber)</span>
+                  </div>
+                </label>
               </div>
             </div>
 
@@ -530,6 +542,81 @@
             <button id="btnDownloadQuoteCard" class="btn btn-primary">
               <i data-lucide="download"></i> 카드 이미지 다운로드
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Split-Screen Draft Studio Modal (집필 스튜디오) -->
+    <div id="modalDraftStudio" class="modal-overlay hidden">
+      <div class="modal-card modal-draft-studio">
+        <div class="draft-studio-header">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i data-lucide="pen-tool" class="text-primary"></i>
+            <h2 style="font-size:1.15rem; font-family:var(--font-serif); margin:0;">서재 기반 집필 스튜디오 (Draft Studio)</h2>
+            <span style="font-size:0.78rem; color:var(--text-muted);">LaTeX 수식 + 서재 지식 카드 Vault + 실시간 미리보기</span>
+          </div>
+          <button class="btn-close-modal" data-close="modalDraftStudio">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="draft-studio-body">
+          <!-- Left Pane: Knowledge Vault -->
+          <div class="draft-studio-vault">
+            <div class="draft-vault-search-box">
+              <input type="text" id="draftVaultSearch" placeholder="서재 인용구, 정리, 수식 검색..." style="width:100%; padding:8px 12px; font-size:0.85rem;" />
+              <div class="draft-vault-filter-chips">
+                <button class="draft-vault-chip active" data-type="all">전체</button>
+                <button class="draft-vault-chip" data-type="proof">📐 증명/원리</button>
+                <button class="draft-vault-chip" data-type="concept">💡 핵심 개념</button>
+                <button class="draft-vault-chip" data-type="idea">🚀 적용 아이디어</button>
+                <button class="draft-vault-chip" data-type="quote">📝 단순 발췌</button>
+              </div>
+            </div>
+            <div class="draft-vault-list" id="draftVaultList">
+              <!-- Cards dynamically inserted -->
+            </div>
+          </div>
+
+          <!-- Right Pane: Manuscript Editor -->
+          <div class="draft-studio-editor">
+            <div class="draft-editor-top-bar">
+              <input type="text" id="draftChapterTitle" class="draft-chapter-input" value="제1장. 새로운 이론의 정립" placeholder="챕터 제목을 입력하세요..." />
+              <div class="draft-editor-actions">
+                <button id="btnDraftTogglePreview" class="btn btn-sm btn-outline active" title="실시간 수식 미리보기 분할 토글">
+                  <i data-lucide="split"></i> 미리보기 분할
+                </button>
+                <button id="btnDraftSave" class="btn btn-sm btn-secondary" title="원고 로컬 스토리지에 저장">
+                  <i data-lucide="save"></i> 원고 저장
+                </button>
+                <button id="btnDraftExportTex" class="btn btn-sm btn-primary" title="학술 논문/저서용 LaTeX (.tex) 파일로 내보내기">
+                  <i data-lucide="file-code"></i> LaTeX (.tex)
+                </button>
+                <button id="btnDraftExportMd" class="btn btn-sm btn-outline" title="마크다운 (.md) 파일로 내보내기">
+                  <i data-lucide="file-text"></i> 마크다운 (.md)
+                </button>
+              </div>
+            </div>
+
+            <!-- LaTeX & Markdown Editor Toolbar -->
+            <div class="draft-editor-toolbar">
+              <button class="draft-tool-btn" data-insert="# ">H1</button>
+              <button class="draft-tool-btn" data-insert="## ">H2</button>
+              <button class="draft-tool-btn" data-insert="### ">H3</button>
+              <button class="draft-tool-btn" data-insert="**강조**"><b>B</b></button>
+              <button class="draft-tool-btn" data-insert="- 항목\n">List</button>
+              <button class="draft-tool-btn" data-insert="$E=mc^2$" title="인라인 수식">📐 $인라인$</button>
+              <button class="draft-tool-btn" data-insert="\n$$\n\\begin{aligned}\nf(x) &= \\int_0^x t^2 dt \\\\\n&= \\frac{x^3}{3}\n\\end{aligned}\n$$\n" title="정렬 수식 블록">$$\begin{aligned}$$</button>
+              <button class="draft-tool-btn" data-insert="\n\\begin{equation}\n\\nabla \\times \\mathbf{B} = \\mu_0 \\mathbf{J} + \\mu_0 \\epsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{equation}\n" title="방정식 환경">\begin{equation}</button>
+              <button class="draft-tool-btn" data-insert="\n\\begin{proof}\n여기에 수학적 증명을 서술합니다.\n\\end{proof}\n" title="증명 환경">\begin{proof}</button>
+            </div>
+
+            <!-- Editor & Preview Split -->
+            <div class="draft-editor-content-wrap">
+              <textarea id="draftEditorTextarea" class="draft-editor-textarea" placeholder="여기에 원고를 집필하세요... 좌측 지식 저장소의 카드를 클릭하여 즉시 인용할 수 있습니다."></textarea>
+              <div id="draftEditorPreview" class="draft-editor-preview"></div>
+            </div>
           </div>
         </div>
       </div>

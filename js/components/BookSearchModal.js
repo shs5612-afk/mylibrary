@@ -188,10 +188,31 @@ export class BookSearchModal {
 
     // Attach Select Events
     resultsContainer.querySelectorAll('.btn-select-yes24').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const idx = parseInt(btn.getAttribute('data-idx'), 10);
-        const selected = books[idx];
-        if (selected && this.onBookAdded) {
+        const selected = { ...books[idx] };
+        if (!selected) return;
+
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ 목차 연동 중...</span>`;
+
+        // If goodsNo exists, fetch detailed TOC & Description from YES24
+        if (selected.goodsNo && (!selected.toc || !selected.description)) {
+          try {
+            const detailRes = await fetch(`/api/yes24?goodsNo=${encodeURIComponent(selected.goodsNo)}`);
+            if (detailRes.ok) {
+              const detailData = await detailRes.json();
+              if (detailData.success) {
+                if (detailData.toc) selected.toc = detailData.toc;
+                if (detailData.description && !selected.description) selected.description = detailData.description;
+              }
+            }
+          } catch (err) {
+            console.warn('Auto TOC fetch failed, proceeding with basic info:', err);
+          }
+        }
+
+        if (this.onBookAdded) {
           this.onBookAdded(selected);
           this.close();
         }

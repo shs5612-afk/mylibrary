@@ -26,7 +26,7 @@ export class Yes24Fetcher {
         const data = await res.json();
         if (data.success && Array.isArray(data.books) && data.books.length > 0) {
           books = data.books.map(b => this.normalizeBook(b));
-          if (books.length >= 3) {
+          if (books.length >= 1) {
             return books;
           }
         }

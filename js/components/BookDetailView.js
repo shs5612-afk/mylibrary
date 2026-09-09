@@ -73,7 +73,19 @@ export class BookDetailView {
             <div>
               <span class="detail-category-badge">${book.category || '기타'}</span>
               <h2 class="detail-title">${book.title}</h2>
-              <div class="detail-author-pub">${book.author} · ${book.publisher || '출판사 미상'}</div>
+              <!-- Author & Publisher & Translator -->
+              <div class="detail-author-pub">
+                <span>${book.author}</span>
+                ${book.translator ? `<span> · 🌐 옮긴이: ${book.translator}</span>` : ''}
+                <span> · 🏛️ ${book.publisher || '출판사 미상'}</span>
+              </div>
+
+              <!-- Tags if any -->
+              ${Array.isArray(book.tags) && book.tags.length > 0 ? `
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 12px 0;">
+                  ${book.tags.map(t => `<span class="badge" style="font-size:0.75rem; background:var(--bg-surface); border:1px solid var(--border-medium); color:var(--text-muted);">#${t}</span>`).join('')}
+                </div>
+              ` : ''}
 
               <!-- Metadata Grid -->
               <div class="detail-meta-grid">
@@ -137,6 +149,9 @@ export class BookDetailView {
             <button class="section-tab-btn ${this.activeTab === 'notes' ? 'active' : ''}" data-section-tab="notes">
               <i data-lucide="highlighter"></i> 인상 깊은 문장 & 독서 일지
             </button>
+            <button class="section-tab-btn ${this.activeTab === 'sessions' ? 'active' : ''}" data-section-tab="sessions">
+              <i data-lucide="repeat"></i> N회독 이력 (${(book.readingSessions || []).length}회)
+            </button>
             <button class="section-tab-btn ${this.activeTab === 'ai_copilot' ? 'active' : ''}" data-section-tab="ai_copilot">
               <i data-lucide="bot"></i> AI 심층 독서 토론 & 코파일럿
             </button>
@@ -150,6 +165,9 @@ export class BookDetailView {
 
           <!-- Section 1: Notes & Quotes -->
           <div id="sectionNotes" class="section-panel ${this.activeTab === 'notes' ? 'active' : ''}"></div>
+
+          <!-- Section 1.5: Reading Sessions (N-th reading) -->
+          <div id="sectionSessions" class="section-panel ${this.activeTab === 'sessions' ? 'active' : ''}"></div>
 
           <!-- Section 2: AI Copilot Chat -->
           <div id="sectionAICopilot" class="section-panel ${this.activeTab === 'ai_copilot' ? 'active' : ''}"></div>
@@ -251,6 +269,7 @@ export class BookDetailView {
 
         this.container.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
         if (tabKey === 'notes') this.container.querySelector('#sectionNotes').classList.add('active');
+        if (tabKey === 'sessions') this.container.querySelector('#sectionSessions').classList.add('active');
         if (tabKey === 'ai_copilot') this.container.querySelector('#sectionAICopilot').classList.add('active');
         if (tabKey === 'toc') this.container.querySelector('#sectionTOC').classList.add('active');
         if (tabKey === 'description') this.container.querySelector('#sectionDescription').classList.add('active');
@@ -259,6 +278,7 @@ export class BookDetailView {
   }
 
   renderSubComponents() {
+    // 1. Reading Notes View
     const notesContainer = this.container.querySelector('#sectionNotes');
     this.notesView = new ReadingNotesView({
       container: notesContainer,
@@ -269,7 +289,10 @@ export class BookDetailView {
     });
     this.notesView.render();
 
-    // Injected AIService passed to AICopilotView
+    // 2. Reading Sessions (N-th reading tracker)
+    this.renderSessions();
+
+    // 3. Injected AIService passed to AICopilotView
     const aiContainer = this.container.querySelector('#sectionAICopilot');
     this.aiView = new AICopilotView({
       container: aiContainer,
@@ -282,10 +305,23 @@ export class BookDetailView {
         if (this.writingWorkspaceView) {
           this.writingWorkspaceView.render(drafts);
         }
+      },
+      onSaveToNotes: (noteText) => {
+        const newQuote = {
+          id: `q_${Date.now()}`,
+          text: noteText,
+          type: 'idea',
+          comment: 'AI 심층 토론에서 도출한 핵심 인사이트',
+          createdAt: new Date().toISOString().split('T')[0]
+        };
+        const quotes = [newQuote, ...(this.currentBook.quotes || [])];
+        this.triggerUpdate({ quotes });
+        if (this.notesView) this.notesView.render();
       }
     });
     this.aiView.render();
 
+    // 4. Writing Workspace View
     const writingContainer = this.container.querySelector('#sectionWritingWorkspace');
     this.writingWorkspaceView = new WritingWorkspaceView({
       container: writingContainer,
@@ -293,6 +329,110 @@ export class BookDetailView {
       onUpdateDrafts: (newDrafts) => this.triggerUpdate({ writingDrafts: newDrafts })
     });
     this.writingWorkspaceView.render(this.currentBook.writingDrafts || []);
+  }
+
+  renderSessions() {
+    const sessionsContainer = this.container.querySelector('#sectionSessions');
+    if (!sessionsContainer) return;
+
+    const sessions = this.currentBook.readingSessions || [];
+    const nextRound = sessions.length + 1;
+    const today = new Date().toISOString().split('T')[0];
+
+    sessionsContainer.innerHTML = `
+      <div style="max-width:860px; margin:0 auto; padding:10px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div>
+            <h3 style="font-family:var(--font-serif); font-size:1.2rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+              <i data-lucide="repeat" class="text-primary"></i> N회독 누적 독서 이력 (${sessions.length}회독 기록됨)
+            </h3>
+            <p style="font-size:0.83rem; color:var(--text-muted); margin-top:4px;">
+              고전과 명저는 시간이 지날 때마다 깊이가 달라집니다. 재독서할 때마다 깨달음의 변화를 기록해보세요.
+            </p>
+          </div>
+        </div>
+
+        <!-- Add New Session Card Form -->
+        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-medium); border-radius:var(--radius-md); padding:20px; margin-bottom:24px; box-shadow:var(--shadow-sm);">
+          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:12px; color:var(--accent-primary); display:flex; align-items:center; gap:6px;">
+            <i data-lucide="plus-circle"></i> 제 ${nextRound}회독 독서 기록 추가하기
+          </h4>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">회독 시작일</label>
+              <input type="date" id="newSessionStart" value="${today}" style="width:100%; padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-medium); background:var(--bg-surface); color:var(--text-main);" />
+            </div>
+            <div>
+              <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">회독 완독일 (선택)</label>
+              <input type="date" id="newSessionFinish" style="width:100%; padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-medium); background:var(--bg-surface); color:var(--text-main);" />
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.78rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">이번 ${nextRound}회독에서의 새로운 통찰 / 시각의 변화</label>
+            <textarea id="newSessionNote" rows="3" placeholder="예: 3년 전 처음 읽었을 때는 개념만 훑었는데, 이번에 다시 읽으니 저자의 5장 논증이 현실 문제와 정확히 맞닿아 있음을 깨달았다..." style="width:100%; padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-medium); background:var(--bg-surface); color:var(--text-main); font-size:0.88rem; line-height:1.6;"></textarea>
+          </div>
+          <button id="btnSaveNewSession" class="btn btn-primary btn-sm" style="font-weight:700;">
+            <i data-lucide="check"></i> 제 ${nextRound}회독 이력 저장
+          </button>
+        </div>
+
+        <!-- Sessions Timeline List -->
+        <div class="sessions-timeline-wrap">
+          ${sessions.length === 0 ? '<p style="text-align:center; color:var(--text-muted); padding:30px;">아직 기록된 회독 이력이 없습니다. 위의 폼에서 첫 회독을 기록해보세요!</p>' : ''}
+          ${[...sessions].reverse().map((s, idx) => `
+            <div class="session-card">
+              <div class="session-round-badge">
+                <span style="font-size:0.7rem; font-weight:600; text-transform:uppercase;">ROUND</span>
+                <span>${s.round || (sessions.length - idx)}</span>
+              </div>
+              <div class="session-content">
+                <div class="session-dates">
+                  📅 ${s.startDate || '시작일 미지정'} ~ ${s.finishDate ? s.finishDate : '📖 현재 다시 읽는 중'}
+                </div>
+                <div class="session-note">
+                  ${escapeHtml(s.note || '별도 메모 없이 완독함')}
+                </div>
+              </div>
+              <button class="btn btn-icon btn-xs btn-delete-session" data-idx="${sessions.length - 1 - idx}" title="이 회독 기록 삭제" style="align-self:flex-start; opacity:0.6;">
+                <i data-lucide="trash"></i>
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) window.lucide.createIcons();
+
+    // Attach Session Events
+    const btnSave = sessionsContainer.querySelector('#btnSaveNewSession');
+    if (btnSave) {
+      btnSave.addEventListener('click', () => {
+        const start = sessionsContainer.querySelector('#newSessionStart').value;
+        const finish = sessionsContainer.querySelector('#newSessionFinish').value;
+        const note = sessionsContainer.querySelector('#newSessionNote').value.trim();
+
+        const newSession = {
+          round: nextRound,
+          startDate: start,
+          finishDate: finish,
+          note: note || `${nextRound}회독 완료`
+        };
+
+        const updatedSessions = [...(this.currentBook.readingSessions || []), newSession];
+        this.triggerUpdate({ readingSessions: updatedSessions });
+        this.renderSessions();
+      });
+    }
+
+    sessionsContainer.querySelectorAll('.btn-delete-session').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const delIdx = parseInt(btn.getAttribute('data-idx'), 10);
+        const updated = (this.currentBook.readingSessions || []).filter((_, i) => i !== delIdx);
+        this.triggerUpdate({ readingSessions: updated });
+        this.renderSessions();
+      });
+    });
   }
 
   triggerUpdate(updates) {

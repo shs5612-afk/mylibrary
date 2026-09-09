@@ -10,8 +10,70 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { query, isbn } = req.query;
-  const searchTerm = (isbn || query || '').trim();
+  const { query, q, isbn, goodsNo } = req.query || {};
+  const searchQuery = query || q;
+
+  // 0. Detail Goods Inquiry Mode (Fetch full TOC & Book Intro by goodsNo)
+  if (goodsNo) {
+    try {
+      const detailUrl = `https://www.yes24.com/Product/Goods/${encodeURIComponent(goodsNo)}`;
+      const resDetail = await fetch(detailUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Referer': 'https://www.yes24.com/'
+        }
+      });
+
+      if (resDetail.ok) {
+        const buffer = await resDetail.arrayBuffer();
+        let html = '';
+        try {
+          html = new TextDecoder('utf-8').decode(buffer);
+        } catch (_) {
+          html = new TextDecoder('euc-kr').decode(buffer);
+        }
+
+        // Extract TOC from <div id="infoset_toc">...<textarea class="txtContentText">...</textarea>
+        const tocMatch = /<div[^>]*id=["']infoset_toc["'][\s\S]*?<textarea[^>]*class=["']txtContentText["'][^>]*>([\s\S]*?)<\/textarea>/i.exec(html) ||
+                         /<div[^>]*id=["']infoset_toc["'][\s\S]*?<div[^>]*class=["']infoWrap_txt["'][^>]*>([\s\S]*?)<\/div>/i.exec(html);
+        let toc = '';
+        if (tocMatch) {
+          toc = tocMatch[1]
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .trim();
+        }
+
+        // Extract Intro from <div id="infoset_introduce">
+        const introMatch = /<div[^>]*id=["']infoset_introduce["'][\s\S]*?<textarea[^>]*class=["']txtContentText["'][^>]*>([\s\S]*?)<\/textarea>/i.exec(html);
+        let description = '';
+        if (introMatch) {
+          description = introMatch[1]
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .trim();
+        }
+
+        return res.status(200).json({
+          success: true,
+          goodsNo,
+          toc,
+          description
+        });
+      }
+    } catch (dErr) {
+      console.warn('YES24 detail TOC fetch error:', dErr.message);
+    }
+  }
+
+  const searchTerm = (isbn || searchQuery || '').trim();
 
   if (!searchTerm) {
     return res.status(400).json({ success: false, error: 'Search term or ISBN is required' });
@@ -19,41 +81,62 @@ export default async function handler(req, res) {
 
   const books = [];
 
-  // 1. Attempt YES24 Scraping (Support both domain=ALL & domain=BOOK)
+  // 1. YES24 Live Scraping with Session Warm-up & Modern DOM Parsing
   try {
+    const baseHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Referer': 'https://www.yes24.com/'
+    };
+
+    // Step A: Warm up session cookie to bypass redirect to Main/default.aspx
+    let cookieHeader = '';
+    try {
+      const warmRes = await fetch('https://www.yes24.com/Main/default.aspx', { headers: baseHeaders });
+      const setCookie = warmRes.headers.get('set-cookie');
+      if (setCookie) {
+        cookieHeader = setCookie.split(',').map(c => c.split(';')[0]).join('; ');
+      }
+    } catch (cookieErr) {
+      console.warn('YES24 session warm-up error:', cookieErr.message);
+    }
+
+    const reqHeaders = { ...baseHeaders };
+    if (cookieHeader) reqHeaders['Cookie'] = cookieHeader;
+
     const encoded = encodeURIComponent(searchTerm);
     const searchUrls = [
-      `https://www.yes24.com/Product/Search?domain=ALL&query=${encoded}`,
-      `https://www.yes24.com/Product/Search?domain=BOOK&query=${encoded}`
+      `https://www.yes24.com/Product/Search?domain=BOOK&query=${encoded}`,
+      `https://www.yes24.com/Product/Search?domain=ALL&query=${encoded}`
     ];
 
     for (const searchUrl of searchUrls) {
-      if (books.length >= 5) break;
+      if (books.length >= 8) break;
 
-      const response = await fetch(searchUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Referer': 'https://www.yes24.com/'
-        }
-      });
-
+      const response = await fetch(searchUrl, { headers: reqHeaders });
       if (response.ok) {
-        const html = await response.text();
+        const buffer = await response.arrayBuffer();
+        let html = '';
+        try {
+          html = new TextDecoder('utf-8').decode(buffer);
+          if (!html.includes('yesSchList') && !html.includes('goods_name')) {
+            html = new TextDecoder('euc-kr').decode(buffer);
+          }
+        } catch (_) {
+          html = new TextDecoder('utf-8').decode(buffer);
+        }
 
-        // Pattern A: <li data-goods-no="..."> or <div class="itemUnit"> or <div class="item_info">
-        const itemMatches = html.match(/<li\s+data-goods-no="(\d+)"[\s\S]*?<\/li>/gi) ||
-                            html.match(/<div\s+class="itemUnit"[\s\S]*?<\/div>\s*<\/li>/gi) ||
-                            html.match(/<div\s+class="item_info"[\s\S]*?<\/div>/gi) || [];
+        // Match individual product list items (e.g. <li ... data-goods-no="...">)
+        const itemMatches = html.match(/<li[^>]*data-goods-no="(\d+)"[^>]*>[\s\S]*?<\/li>/gi) ||
+                            html.match(/<div\s+class="itemUnit"[\s\S]*?<\/div>\s*<\/li>/gi) || [];
 
         for (const itemHtml of itemMatches) {
           if (books.length >= 20) break;
 
           // Goods No
           const goodsNoMatch = /data-goods-no="(\d+)"/i.exec(itemHtml) ||
-                               /href="\/Product\/Goods\/(\d+)"/i.exec(itemHtml) ||
-                               /goods\/(\d+)/i.exec(itemHtml);
+                               /href="\/[Pp]roduct\/[Gg]oods\/(\d+)"/i.exec(itemHtml);
           const goodsNo = goodsNoMatch ? goodsNoMatch[1] : '';
 
           // Title
@@ -62,21 +145,23 @@ export default async function handler(req, res) {
           let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
 
           // Subtitle
-          const subMatch = /<a\s+class="gd_nameE"[^>]*>([\s\S]*?)<\/a>/i.exec(itemHtml);
+          const subMatch = /<(?:a|span)\s+class="gd_nameE"[^>]*>([\s\S]*?)<\/(?:a|span)>/i.exec(itemHtml);
           const subtitle = subMatch ? subMatch[1].replace(/<[^>]+>/g, '').trim() : '';
           if (subtitle) title = `${title} - ${subtitle}`;
 
           // Author
-          const authMatch = /<span\s+class="info_auth"[^>]*>([\s\S]*?)<\/span>/i.exec(itemHtml) ||
-                            /<span\s+class="authPub_info"[^>]*>([\s\S]*?)<\/span>/i.exec(itemHtml);
-          const author = authMatch ? authMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '저자 미상';
+          const authMatch = /<span\s+class="[^"]*info_auth"[^>]*>([\s\S]*?)<\/span>/i.exec(itemHtml);
+          let author = '저자 미상';
+          if (authMatch) {
+            author = authMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').replace(/저\b/g, '').trim();
+          }
 
           // Publisher
-          const pubMatch = /<span\s+class="info_pub"[^>]*>([\s\S]*?)<\/span>/i.exec(itemHtml);
+          const pubMatch = /<span\s+class="[^"]*info_pub"[^>]*>([\s\S]*?)<\/span>/i.exec(itemHtml);
           const publisher = pubMatch ? pubMatch[1].replace(/<[^>]+>/g, '').trim() : '';
 
           // Pub Date
-          const dateMatch = /<span\s+class="info_date"[^>]*>([\s\S]*?)<\/span>/i.exec(itemHtml);
+          const dateMatch = /<span\s+class="[^"]*info_date"[^>]*>([\s\S]*?)<\/span>/i.exec(itemHtml);
           const pubDate = dateMatch ? dateMatch[1].replace(/<[^>]+>/g, '').trim() : '';
 
           // Price
@@ -84,18 +169,19 @@ export default async function handler(req, res) {
                              /class="txt_price"[^>]*>([\d,]+)원/i.exec(itemHtml);
           const price = priceMatch ? `${priceMatch[1]}원` : '';
 
-          // Cover Image URL
+          // Cover Image URL (Upgraded to high-res XL)
           const imgMatch = /data-original="([^"]+)"/i.exec(itemHtml) ||
                            /src="(https:\/\/image\.yes24\.com\/goods\/[^"]+)"/i.exec(itemHtml) ||
                            /src="([^"]+)"[^>]*class="lazy"/i.exec(itemHtml);
           let cover = imgMatch ? imgMatch[1] : '';
           if (cover.startsWith('//')) cover = 'https:' + cover;
           if (cover) {
-            cover = cover.replace('/M/', '/XL/').replace('/S/', '/XL/');
+            cover = cover.replace(/\/M\//i, '/XL/').replace(/\/L\//i, '/XL/').replace(/\/S\//i, '/XL/');
           }
 
           // Description
-          const descMatch = /<div\s+class="info_read"[^>]*>([\s\S]*?)<\/div>/i.exec(itemHtml);
+          const descMatch = /<div\s+class="info_read"[^>]*>([\s\S]*?)<\/div>/i.exec(itemHtml) ||
+                            /<p\s+class="item_desc"[^>]*>([\s\S]*?)<\/p>/i.exec(itemHtml);
           const description = descMatch ? descMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
 
           if (title && !books.some(b => b.title === title || (goodsNo && b.goodsNo === goodsNo))) {
@@ -118,11 +204,11 @@ export default async function handler(req, res) {
       }
     }
   } catch (err) {
-    console.warn('YES24 live HTML parsing warning:', err);
+    console.warn('YES24 live HTML parsing error/warning:', err);
   }
 
-  // 2. Fallback / Augment with Google Books API if fewer than 6 books found
-  if (books.length < 6) {
+  // 2. Fallback / Augment with Google Books API if fewer than 5 books found
+  if (books.length < 5) {
     try {
       const gEncoded = encodeURIComponent(searchTerm);
       const gRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${gEncoded}&maxResults=15&langRestrict=ko`);

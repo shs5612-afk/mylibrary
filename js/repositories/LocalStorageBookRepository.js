@@ -33,29 +33,50 @@ export class LocalStorageBookRepository extends IBookRepository {
 
   add(book) {
     const books = this.getAll();
+    const today = new Date().toISOString().split('T')[0];
+    const initialSessions = Array.isArray(book.readingSessions) && book.readingSessions.length > 0
+      ? book.readingSessions
+      : [{ round: 1, startDate: book.startDate || today, finishDate: book.finishDate || '', note: '초판 1회독 시작' }];
+
+    const normalizedQuotes = (book.quotes || []).map((q, idx) => ({
+      id: q.id || `q_${Date.now()}_${idx}`,
+      text: q.text || '',
+      page: parseInt(q.page, 10) || 0,
+      comment: q.comment || '',
+      type: q.type || 'quote', // 'quote' | 'proof' | 'concept' | 'idea'
+      myApplication: q.myApplication || '',
+      chapter: q.chapter || '',
+      createdAt: q.createdAt || today
+    }));
+
     const newBook = {
       id: book.id || `book_${Date.now()}`,
+      goodsNo: book.goodsNo || '',
       title: book.title || '제목 없음',
       author: book.author || '저자 미상',
+      translator: book.translator || '',
       publisher: book.publisher || '',
       pubDate: book.pubDate || '',
       isbn: book.isbn || '',
       price: book.price || '',
       category: book.category || '기타',
+      tags: Array.isArray(book.tags) ? book.tags : [],
       status: book.status || 'reading',
       totalPages: parseInt(book.totalPages, 10) || 100,
       currentPage: parseInt(book.currentPage, 10) || 0,
       rating: parseFloat(book.rating) || 0,
-      startDate: book.startDate || new Date().toISOString().split('T')[0],
+      startDate: book.startDate || today,
       finishDate: book.finishDate || '',
       cover: book.cover || '',
       spineColor: book.spineColor || '#2c3e50',
       link: book.link || (book.isbn ? `https://www.yes24.com/Product/Search?domain=BOOK&query=${book.isbn}` : ''),
       description: book.description || '',
       toc: book.toc || '',
-      quotes: book.quotes || [],
+      readingSessions: initialSessions,
+      quotes: normalizedQuotes,
       review: book.review || '',
       writingDrafts: book.writingDrafts || [],
+      draftChapters: book.draftChapters || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

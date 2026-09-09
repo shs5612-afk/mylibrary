@@ -90,7 +90,7 @@ export class StatsModal {
           <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:14px;">📚 분야별 독서 분포</h4>
           <div style="display:flex; flex-direction:column; gap:10px;">
             ${Object.entries(catCounts).map(([cat, count]) => {
-              const pct = Math.round((count / totalBooks) * 100);
+              const pct = totalBooks ? Math.round((count / totalBooks) * 100) : 0;
               return `
                 <div>
                   <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
