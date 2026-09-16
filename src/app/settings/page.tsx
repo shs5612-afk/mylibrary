@@ -107,7 +107,7 @@ export default function SettingsPage() {
                 required
                 value={profile.ownerName}
                 onChange={(e) => setProfile({ ...profile, ownerName: e.target.value })}
-                placeholder="예: 김민준"
+                placeholder="예: 서현상"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
@@ -119,7 +119,7 @@ export default function SettingsPage() {
                 required
                 value={profile.libraryTitle}
                 onChange={(e) => setProfile({ ...profile, libraryTitle: e.target.value })}
-                placeholder="예: 민준이의 지혜의 서재"
+                placeholder="예: 자이당"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
@@ -130,7 +130,7 @@ export default function SettingsPage() {
                 type="text"
                 value={profile.motto}
                 onChange={(e) => setProfile({ ...profile, motto: e.target.value })}
-                placeholder="예: 책 속에서 나만의 우주를 발견하자 ✨"
+                placeholder="예: 내꿈을 실현하는 행복한 인생 ✨"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>

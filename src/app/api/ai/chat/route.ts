@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Prioritized Flash Models (Gemini 3.6 Flash -> Gemini 3.5 Flash -> Latest Flash Series)
+// Prioritized Flash Models
 const PRIORITY_MODELS = [
-  'gemini-3.6-flash',
-  'gemini-3.5-flash',
-  'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-1.5-flash',
   'gemini-1.5-pro',

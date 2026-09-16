@@ -5,7 +5,7 @@ import { INITIAL_BOOKS, INITIAL_PROFILE } from '../data/sampleBooks';
 
 const STORAGE_KEYS = {
   BOOKS: 'mylib_books_v1',
-  PROFILE: 'mylib_profile_v1',
+  PROFILE: 'mylib_profile_v2',
   THOUGHTS: 'mylib_thoughts_v1',
   API_KEY: 'mylib_gemini_api_key',
 };
@@ -15,11 +15,29 @@ export const getStoredProfile = (): PersonalProfile => {
   if (typeof window === 'undefined') return INITIAL_PROFILE;
   const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
   if (!saved) {
+    // Check if there was an old profile that wasn't the old sample
+    const oldSaved = localStorage.getItem('mylib_profile_v1');
+    if (oldSaved) {
+      try {
+        const oldParsed = JSON.parse(oldSaved);
+        if (oldParsed.ownerName && oldParsed.ownerName !== '김민준') {
+          const merged = { ...INITIAL_PROFILE, ...oldParsed };
+          localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(merged));
+          return merged;
+        }
+      } catch (e) {}
+    }
     localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(INITIAL_PROFILE));
     return INITIAL_PROFILE;
   }
   try {
-    return { ...INITIAL_PROFILE, ...JSON.parse(saved) };
+    const parsed = JSON.parse(saved);
+    if (parsed.ownerName === '김민준') {
+      const updated = { ...parsed, ...INITIAL_PROFILE };
+      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
+      return updated;
+    }
+    return { ...INITIAL_PROFILE, ...parsed };
   } catch (e) {
     return INITIAL_PROFILE;
   }

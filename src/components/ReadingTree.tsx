@@ -40,7 +40,7 @@ export default function ReadingTree({ profile }: ReadingTreeProps) {
             </div>
 
             <h2 className="text-lg sm:text-xl font-black text-slate-900">
-              {profile.libraryTitle}
+              {profile.ownerName} 님의 {profile.libraryTitle}
             </h2>
 
             <p className="text-xs text-slate-600 italic">

@@ -50,14 +50,14 @@ export default function Navbar() {
             <div className="flex items-center space-x-3">
               <Link href="/" className="flex items-center space-x-2.5 group">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform text-lg">
-                  {profile?.avatarEmoji || '🛋️'}
+                  {profile?.avatarEmoji || '🌱'}
                 </div>
                 <div>
                   <span className="text-lg sm:text-xl font-black bg-gradient-to-r from-slate-900 via-amber-900 to-rose-900 bg-clip-text text-transparent">
-                    {profile?.libraryTitle || '나만의 AI 서재'}
+                    {profile?.libraryTitle || '자이당'}
                   </span>
                   <span className="hidden sm:inline-block ml-2 text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-bold border border-amber-200">
-                    1인 프라이빗 서재
+                    서현상의 프라이빗 서재
                   </span>
                 </div>
               </Link>

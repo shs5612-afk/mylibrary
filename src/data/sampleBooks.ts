@@ -1,10 +1,10 @@
 import { PersonalBook, PersonalProfile } from '../lib/types';
 
 export const INITIAL_PROFILE: PersonalProfile = {
-  ownerName: '김민준',
-  libraryTitle: '민준이의 지혜의 서재',
-  motto: '매일 한 장의 책 속에서 나만의 새로운 우주를 발견하자 ✨',
-  avatarEmoji: '🦊',
+  ownerName: '서현상',
+  libraryTitle: '자이당',
+  motto: '내꿈을 실현하는 행복한 인생 ✨',
+  avatarEmoji: '🌱',
   readingPoints: 520,
   level: 3,
   totalCompleted: 6,

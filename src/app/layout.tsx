@@ -3,8 +3,8 @@ import './globals.css';
 import Navbar from '../components/Navbar';
 
 export const metadata: Metadata = {
-  title: '나만의 AI 서재 (My AI Library) - 1인 1도서관',
-  description: '사서 인증과 군더더기 없는 나만의 프라이빗 AI 서재 & 독서 연구소',
+  title: '자이당 - 서현상의 AI 서재 & 독서 연구소',
+  description: '서현상 님의 자이당 · 내꿈을 실현하는 행복한 인생을 위한 1인 1도서관 AI 서재',
 };
 
 export default function RootLayout({

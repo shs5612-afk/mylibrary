@@ -11,6 +11,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'image.yes24.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'image.aladin.co.kr',
+      },
     ],
   },
 };
